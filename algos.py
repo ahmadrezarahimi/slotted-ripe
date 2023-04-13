@@ -1,7 +1,6 @@
 from petrelic.multiplicative.pairing import G1, G2, GT, G1Element, G2Element,GTElement, Bn
 from concurrent.futures import ThreadPoolExecutor
 import sqlite3
-
 import utils as utils
 
 
@@ -37,6 +36,7 @@ def setup(n, L):
             if i != j:
                 W[i][j] = W[i][j].result()
     utils.store_crs(A, B, Gamma, U, W, Z, g1, g2, h)
+    return beta,t
 
 def keyGen(crs_db_path, i, n, L):
     r = G1.order().random()
@@ -111,6 +111,33 @@ def batchKeyGen(db_path, n, L):
     conn_attr.commit()
     conn_attr.close()
 
+
+def fuse_u(pks, U, X, i, n):
+    for j in range(n):
+        pks[i][0] = pks[i][0] * (U[i][j] ** -X[i][j])
+    return pks[i][0]
+
+def fuse_w(pks, W, X, i, L, n):
+    result = [None] * L
+    for j in range(L):
+        if j != i:
+            result[j] = pks[i][1][j]
+            for k in range(n):
+                result[j] = result[j] * (W[i][j][k] ** X[i][k])
+    return result
+
+def compute_uhat(U, w, L):
+    result = G1.neutral_element()
+    for i in range(L):
+        result = result * U[i][w]
+    return result
+
+def compute_what(W, i, w, L):
+    result = G2.neutral_element()
+    for j in range(L):
+        if i != j:
+            result = result * W[i][j][w]
+    return result
 def aggregate(attributes_db_path, pks_db_path, crs_db_path, n, L):
     # Load attributes
     X = utils.load_attributes(attributes_db_path, n,L)
@@ -120,50 +147,50 @@ def aggregate(attributes_db_path, pks_db_path, crs_db_path, n, L):
 
     # Load CRS
     g1, g2, Z, h, Gamma, A, B, U,W = utils.load_crs(L,crs_db_path)
+    with ThreadPoolExecutor() as executor:
+        # Fuse U
+        u_futures = [executor.submit(fuse_u, pks, U, X, i, n) for i in range(L)]
+        u_results = [future.result() for future in u_futures]
 
-    # fuse attributes into the public keys
-    #the U part
+        # Fuse W
+        w_futures = [executor.submit(fuse_w, pks, W, X, i, L, n) for i in range(L)]
+        w_results = [future.result() for future in w_futures]
+
     for i in range(L):
-        for j in range(n):
-            pks[i][0] = pks[i][0] * (U[i][j] ** -X[i][j])
-    #the W part
-    for i in range(L):
+        pks[i][0] = u_results[i]
         for j in range(L):
             if j != i:
-                for k in range(n):
-                    pks[i][1][j] = pks[i][1][j] * (W[i][j][k] ** X[i][k])
-    # for each w in [0,n] we compute Uhat[w] as product of all U[i][w] for i in [0,L]
-    Uhat = [None] * (n+2)
-    for w in range(n+1):
-        Uhat[w] = G1.neutral_element()
-        for i in range(L):
-            Uhat[w] = Uhat[w] * U[i][w]
-    # and last elemet of uhat is the product of all psk[i][0] for i in [0,L]
-    Uhat[n+1] = G1.neutral_element()
+                pks[i][1][j] = w_results[i][j]
+
+        # Compute Uhat
+    Uhat = [None] * (n + 2)
+    for w in range(n + 1):
+        Uhat[w] = compute_uhat(U, w, L)
+
+    # Compute the last element of Uhat
+    Uhat[n + 1] = G1.neutral_element()
     for i in range(L):
-        Uhat[n+1] = Uhat[n+1] * pks[i][0]
-    # We define What the same way as Uhat, where for each i in [0,L] and for each w in [0,n] we compute What[i][w] as product of all W[i][j][w] for j in [0,L] and i!=j
-    What = [[None] * (n+2) for _ in range(L)]
+        Uhat[n + 1] = Uhat[n + 1] * pks[i][0]
+
+    # Compute What
+    What = [[None] * (n + 2) for _ in range(L)]
     for i in range(L):
-        for w in range(n+1):
-            What[i][w] = G2.neutral_element()
-            for j in range(L):
-                if i != j:
-                    What[i][w] = What[i][w] * W[i][j][w]
-        What[i][n+1] = G2.neutral_element()
+        for w in range(n + 1):
+            What[i][w] = compute_what(W, i, w, L)
+
+    # Compute the last element of What
+    for i in range(L):
+        What[i][n + 1] = G2.neutral_element()
         for j in range(L):
             if i != j:
-                What[i][n+1] = What[i][n+1] * pks[j][1][i]
-        What[i][n+1] = What[i][n+1]**-1
+                What[i][n + 1] = What[i][n + 1] * pks[j][1][i]
+        What[i][n + 1] = What[i][n + 1] ** -1
 
-
-    # We create an array of helping secret keys, we call it hsk and we define it as follows:
-    # hsk[i] = (g1,g2,i,A[i],B[i],What[i])
-    # We create an array of helping secret keys, we call it hsk and we define it as follows:
-    # hsk[i] = (g1,g2,i,X[i],A[i],B[i],What[i]) for each i in [0,L]
     hsk = [(g1, g2, i, X[i], A[i], B[i], What[i]) for i in range(L)]
     utils.store_hsk('hsk.db', hsk)
     utils.store_mpk(g1, g2, h, Z, Gamma, Uhat)
+
+
 
 
 def Enc(mpk, y, m):
@@ -171,7 +198,7 @@ def Enc(mpk, y, m):
     n = len(y)
 
     # Sample randomness s, r, and z
-    s = G1.order().random()
+    s = Bn(0)
     r = G1.order().random()
     z = G1.order().random()
 
@@ -182,6 +209,7 @@ def Enc(mpk, y, m):
 
     # Compute ct[2] as a list of size n+2
     y1 = y + [Bn(0), Bn(0)]
+
     ct2 = [None] * (n+2)
     for w in range(n+2):
         t = y1[w].mod_mul(r,G1.order())
@@ -189,7 +217,7 @@ def Enc(mpk, y, m):
         ct2[w] = (h ** t) * Uhat[w] ** (-1*z)
 
     ct = [ct0, ct1, ct2, ct3]
-    return ct
+    return ct,s
 
 
 
@@ -212,7 +240,7 @@ def Dec(hsk, sk, ct):
     for w in range(n2):
         pairing3 *= ct3.pair(What[w]**X1[w])
     Xbarinv = Xbar.mod_inverse(G1.order())
-    print("Pairing product is \t",(pairing2 * pairing3) ** (Xbarinv))
+    print("Pairing product is \t\t",(pairing2 * pairing3))
     m = ct0 * (pairing1**-1) * ((pairing2 * pairing3) ** (Xbarinv))
 
     return m
