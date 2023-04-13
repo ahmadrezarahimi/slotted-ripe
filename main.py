@@ -122,8 +122,9 @@ def keyGen(db_path, i, n, L):
     # Load U1
     cur.execute('SELECT value FROM crs_U WHERE i = ? AND j = ?', (i, n))
     result = cur.fetchone()
+    rinv = r.mod_inverse(G1.order())
     if result is not None:
-        U1 = G1Element.from_binary(result[0]) ** r
+        U1 = G1Element.from_binary(result[0]) ** rinv
     else:
         raise ValueError(f"Data not found for i={i}, j={n} in crs_U")
 
@@ -254,7 +255,7 @@ def aggregate(attributes_db_path, pks_db_path, crs_db_path, n, L):
     #the U part
     for i in range(L):
         for j in range(n):
-            pks[i][0] = pks[i][0] * (U[i][j] ** X[i][j])
+            pks[i][0] = pks[i][0] * (U[i][j] ** X[i][j].mod_inverse(G1.order()))
     #the W part
     for i in range(L):
         for j in range(L):
@@ -262,28 +263,28 @@ def aggregate(attributes_db_path, pks_db_path, crs_db_path, n, L):
                 for k in range(n):
                     pks[i][1][j] = pks[i][1][j] * (W[i][j][k] ** X[i][k])
     # for each w in [0,n] we compute Uhat[w] as product of all U[i][w] for i in [0,L]
-    Uhat = [None] * (n+1)
-    for w in range(n):
+    Uhat = [None] * (n+2)
+    for w in range(n+1):
         Uhat[w] = G1.neutral_element()
         for i in range(L):
             Uhat[w] = Uhat[w] * U[i][w]
     # and last elemet of uhat is the product of all psk[i][0] for i in [0,L]
-    Uhat[n] = G1.neutral_element()
+    Uhat[n+1] = G1.neutral_element()
     for i in range(L):
         Uhat[n] = Uhat[n] * pks[i][0]
     # We define What the same way as Uhat, where for each i in [0,L] and for each w in [0,n] we compute What[i][w] as product of all W[i][j][w] for j in [0,L] and i!=j
-    What = [[None] * (n+1) for _ in range(L)]
+    What = [[None] * (n+2) for _ in range(L)]
     for i in range(L):
-        for w in range(n):
+        for w in range(n+1):
             What[i][w] = G2.neutral_element()
             for j in range(L):
                 if i != j:
                     What[i][w] = What[i][w] * W[i][j][w]
-        What[i][n] = G2.neutral_element()
+        What[i][n+1] = G2.neutral_element()
         for j in range(L):
             if i != j:
-                What[i][n] = What[i][n] * pks[j][1][i]
-        What[i][n] = What[i][n] ** -1
+                What[i][n+1] = What[i][n+1] * pks[j][1][i]
+        What[i][n+1] = What[i][n+1] ** -1
     # Here we compute masterpublic key
     mpk = (g1,g2,h,Z,Gamma,Uhat)
     # We create an array of helping secret keys, we call it hsk and we define it as follows:
@@ -431,8 +432,9 @@ def Enc(mpk, y, m):
     # Compute ct[2] as a list of size n+2
     y1 = y + [Bn(0), Bn(0)]
     ct2 = [None] * (n+2)
+    zinv = z.mod_inverse(G1.order())
     for w in range(n+2):
-        ct2[w] = h ** (y1[w] * r + s) * Uhat[w] ** (-1*z)
+        ct2[w] = h ** (y1[w].mod_mul(r,G1.order()).mod_add(s,G1.order())) * Uhat[w] ** (zinv)
 
     ct = [ct0, ct1, ct2, ct3]
     return ct
@@ -456,44 +458,77 @@ def Dec(hsk, sk, ct):
     ct0, ct1, ct2, ct3 = ct
 
     X1 = X + [sk, Bn(1)]
-    Xbar = sum(X1)
+    Xbar = Bn(0)
+    for i in range(len(X1)):
+        Xbar = Xbar.mod_add(X1[i], G1.order())
     n2 = len(X)+2
     pairing1 = ct1.pair(B)
     pairing2 = GT.neutral_element()
     for w in range(n2):
-        pairing2 *= ct2[w] ** X1[w].pair(A)
+        pairing2 *= (ct2[w] ** X1[w]).pair(A)
     pairing3 = GT.neutral_element()
     for w in range(n2):
-        pairing3 *= ct3[w].pair(What[w] ** X1[w])
-    m = ct0 * (pairing1**-1) * (pairing2 * pairing3) ** (Xbar ** -1)
+        pairing3 *= ct3.pair(What[w]**X1[w])
+    Xbarinv = Xbar.mod_inverse(G1.order())
+    m = ct0 * (pairing1**-1) * (pairing2 * pairing3) ** (Xbarinv)
 
     return m
-L = 10
-n = 2
-
-# start_time = time()
-# setup(n, L)
-# elapsed_time = time() - start_time
-# print("CRS setup time:", elapsed_time)
+# L = 1
+# n = 1
 #
-# start_time = time()
-# crs = load_crs()
-# elapsed_time = time() - start_time
-# print("CRS load time:", elapsed_time)
+# # start_time = time()
+# # setup(n, L)
+# # elapsed_time = time() - start_time
+# # print("CRS setup time:", elapsed_time)
+# # pk,sk = keyGen('crs.db', 0, n, L)
+# # batchKeyGen('crs.db', n, L)
+# # aggregate("attributes.db", "pks.db", "crs.db", n, L)
+# hsk = load_hsk("hsk.db", 0)
+# mpk = load_mpk("mpk.db")
+# sk = load_sk("sks.db", 0)
+# X  = load_attributes("attributes.db",n,L)
+# print(X)
+# # print(hsk)
+# # # print(sk)
+# # #
+# y = [Bn(0)]
+# m = GT.generator()
+# ct = Enc(mpk, y, m)
+# m_dec = Dec(hsk, sk, ct)
+# print(m_dec)
+# print(m)
 #
-# pk,sk = keyGen('crs.db', 0, n, L)
-# print(sk.binary())
-# batchKeyGen('crs.db', n, L)
-pks = load_public_keys("pks.db", L)
-attr = load_attributes("attributes.db", n, L)
-# aggregate("attributes.db", "pks.db", "crs.db", n, L)
-hsk = load_hsk("hsk.db", 0)
-mpk = load_mpk("mpk.db")
-sk = load_sk("sks.db", 0)
+# a = G1.generator()
+# b = G2.generator()
+# c = G1.order().random()
+# cinv = c.mod_inverse(G1.order())
+# print(c.mod_mul(cinv,G1.order()))
+# m2 = GT.neutral_element()
+# print(G1.neutral_element())
+
+#time the running time of algorithms setup, batchkeygen, aggregate and enc and dec for L=100 and n = 10
+L = 100
+n = 10
+start_time = time()
+setup(n, L)
+elapsed_time = time() - start_time
+print("CRS setup time:", elapsed_time)
+
+start_time = time()
+pk,sk = keyGen('crs.db', 0, n, L)
+elapsed_time = time() - start_time
+print("KeyGen time:", elapsed_time)
+
+start_time = time()
+batchKeyGen('crs.db', n, L)
+elapsed_time = time() - start_time
+print("BatchKeyGen time:", elapsed_time)
+
+start_time = time()
+aggregate("attributes.db", "pks.db", "crs.db", n, L)
+elapsed_time = time() - start_time
+print("Aggregate time:", elapsed_time)
 
 
-y = [Bn(0), Bn(0)]
-m = GT.generator()
-ct = Enc(mpk, y, m)
-m_dec = Dec(hsk, sk, ct)
-print(m_dec)
+
+
