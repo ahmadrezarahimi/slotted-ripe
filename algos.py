@@ -3,15 +3,19 @@ from concurrent.futures import ThreadPoolExecutor
 import sqlite3
 import utils as utils
 
-
+'''
+Setup algorithm
+inputs: n, L where n is the size of the attributes vector, and L is the number of slots.
+outputs: crs (g1, g2, Z, h, Gamma, A, B, U, W)
+'''
 def setup(n, L):
     g1 = G1.generator()
     g2 = G2.generator()
 
     order = G1.order()
-    alpha = order.random()
-    beta = order.random()
-    gamma: Bn = order.random()
+    alpha = G1.order().random()
+    beta = G1.order().random()
+    gamma = G1.order().random()
     gamma_inv = gamma.mod_inverse(order)
 
     Z = g1.pair(g2) ** alpha
@@ -19,24 +23,28 @@ def setup(n, L):
     Gamma = g1 ** gamma
     n1 = n + 1
 
-    Ur = [[order.random() for _ in range(n1)] for _ in range(L)]
+    Ur = [[Bn(1) for _ in range(n1)] for _ in range(L)]
     U = [[g1 ** uri for uri in ur] for ur in Ur]
-    t = [order.random() for _ in range(L)]
+    t = [Bn(1) for _ in range(L)]
     A = [g2 ** t[i] for i in range(L)]
-    B = [g2**alpha * a ** beta for a in A]
+    B = [g2 ** alpha * a ** beta for a in A]
 
     def compute_W(i, j):
-        return [a ** (ur * gamma_inv) for a, ur in zip(A, Ur[i])]
+        return [A[i] ** (ur * gamma_inv) for ur in Ur[j]]
+
+    W = [[[None] * n1 for _ in range(L)] for _ in range(L)]
 
     with ThreadPoolExecutor() as executor:
-        W = [[executor.submit(compute_W, i, j) if i != j else [] for j in range(L)] for i in range(L)]
+        futures = {(i, j): executor.submit(compute_W, i, j) for i in range(L) for j in range(L) if i != j}
 
     for i in range(L):
         for j in range(L):
             if i != j:
-                W[i][j] = W[i][j].result()
+                W[i][j] = futures[(i, j)].result()
+
     utils.store_crs(A, B, Gamma, U, W, Z, g1, g2, h)
-    return beta,t
+
+
 
 def keyGen(crs_db_path, i, n, L):
     r = G1.order().random()
@@ -96,7 +104,6 @@ def batchKeyGen(db_path, n, L):
         pk, sk = keyGen(db_path, i, n, L)
         store_pk(cur_pks, pk, i)
         cur_sks.execute('INSERT OR REPLACE INTO secret_keys (i, sk) VALUES (?, ?)', (i, sk.binary()))
-
         attr = [G1.order().random() for _ in range(n)]
 
         for j, value in enumerate(attr):
@@ -197,8 +204,7 @@ def Enc(mpk, y, m):
     g1, g2, h, Z, Gamma, Uhat = mpk
     n = len(y)
 
-    # Sample randomness s, r, and z
-    s = Bn(0)
+    s = G1.order().random()
     r = G1.order().random()
     z = G1.order().random()
 
@@ -214,10 +220,11 @@ def Enc(mpk, y, m):
     for w in range(n+2):
         t = y1[w].mod_mul(r,G1.order())
         t = t.mod_add(s,G1.order())
+        # t = y1[w] * r + s
         ct2[w] = (h ** t) * Uhat[w] ** (-1*z)
 
     ct = [ct0, ct1, ct2, ct3]
-    return ct,s
+    return ct
 
 
 
@@ -240,7 +247,6 @@ def Dec(hsk, sk, ct):
     for w in range(n2):
         pairing3 *= ct3.pair(What[w]**X1[w])
     Xbarinv = Xbar.mod_inverse(G1.order())
-    print("Pairing product is \t\t",(pairing2 * pairing3))
     m = ct0 * (pairing1**-1) * ((pairing2 * pairing3) ** (Xbarinv))
 
     return m

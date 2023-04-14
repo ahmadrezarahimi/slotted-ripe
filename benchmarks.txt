@@ -1,0 +1,152 @@
+L=10, n=10
+Setup time: 0.08 seconds
+Aggregate time: 0.14 seconds
+Encryption time: 3.04 ms
+Decryption time: 20.99 ms
+Size of crs: 180.0 KB
+Size of mpk: 16.0 KB
+
+L=15, n=10
+Setup time: 0.14 seconds
+Aggregate time: 0.31 seconds
+Encryption time: 3.13 ms
+Decryption time: 21.46 ms
+Size of crs: 348.0 KB
+Size of mpk: 16.0 KB
+
+L=20, n=10
+Setup time: 0.21 seconds
+Aggregate time: 0.44 seconds
+Encryption time: 3.03 ms
+Decryption time: 20.44 ms
+Size of crs: 588.0 KB
+Size of mpk: 16.0 KB
+
+L=25, n=10
+Setup time: 0.30 seconds
+Aggregate time: 0.85 seconds
+Encryption time: 3.13 ms
+Decryption time: 20.16 ms
+Size of crs: 892.0 KB
+Size of mpk: 16.0 KB
+
+L=30, n=10
+Setup time: 0.40 seconds
+Aggregate time: 1.16 seconds
+Encryption time: 3.04 ms
+Decryption time: 20.13 ms
+Size of crs: 1.23 MB
+Size of mpk: 16.0 KB
+
+L=35, n=10
+Setup time: 0.53 seconds
+Aggregate time: 1.21 seconds
+Encryption time: 2.99 ms
+Decryption time: 20.07 ms
+Size of crs: 1.67 MB
+Size of mpk: 16.0 KB
+
+L=40, n=10
+Setup time: 0.66 seconds
+Aggregate time: 1.64 seconds
+Encryption time: 3.10 ms
+Decryption time: 20.06 ms
+Size of crs: 2.19 MB
+Size of mpk: 16.0 KB
+
+L=45, n=10
+Setup time: 0.88 seconds
+Aggregate time: 2.04 seconds
+Encryption time: 3.01 ms
+Decryption time: 20.06 ms
+Size of crs: 2.77 MB
+Size of mpk: 16.0 KB
+
+L=50, n=10
+Setup time: 1.03 seconds
+Aggregate time: 3.14 seconds
+Encryption time: 3.03 ms
+Decryption time: 20.08 ms
+Size of crs: 3.41 MB
+Size of mpk: 16.0 KB
+
+L=55, n=10
+Setup time: 1.20 seconds
+Aggregate time: 2.96 seconds
+Encryption time: 3.01 ms
+Decryption time: 20.11 ms
+Size of crs: 4.11 MB
+Size of mpk: 16.0 KB
+
+L=60, n=10
+Setup time: 1.51 seconds
+Aggregate time: 3.59 seconds
+Encryption time: 3.01 ms
+Decryption time: 20.18 ms
+Size of crs: 4.89 MB
+Size of mpk: 16.0 KB
+
+L=65, n=10
+Setup time: 1.76 seconds
+Aggregate time: 5.27 seconds
+Encryption time: 3.04 ms
+Decryption time: 20.04 ms
+Size of crs: 5.73 MB
+Size of mpk: 16.0 KB
+
+L=70, n=10
+Setup time: 2.02 seconds
+Aggregate time: 6.11 seconds
+Encryption time: 3.11 ms
+Decryption time: 20.05 ms
+Size of crs: 6.66 MB
+Size of mpk: 16.0 KB
+
+L=75, n=10
+Setup time: 2.31 seconds
+Aggregate time: 6.88 seconds
+Encryption time: 3.09 ms
+Decryption time: 19.91 ms
+Size of crs: 7.64 MB
+Size of mpk: 16.0 KB
+
+L=80, n=10
+Setup time: 2.51 seconds
+Aggregate time: 6.32 seconds
+Encryption time: 3.01 ms
+Decryption time: 20.03 ms
+Size of crs: 8.7 MB
+Size of mpk: 16.0 KB
+
+L=85, n=10
+Setup time: 2.95 seconds
+Aggregate time: 8.99 seconds
+Encryption time: 3.01 ms
+Decryption time: 20.08 ms
+Size of crs: 9.82 MB
+Size of mpk: 16.0 KB
+
+L=90, n=10
+Setup time: 3.26 seconds
+Aggregate time: 7.96 seconds
+Encryption time: 3.03 ms
+Decryption time: 20.12 ms
+Size of crs: 11.01 MB
+Size of mpk: 16.0 KB
+
+L=95, n=10
+Setup time: 3.65 seconds
+Aggregate time: 11.07 seconds
+Encryption time: 2.98 ms
+Decryption time: 20.05 ms
+Size of crs: 12.27 MB
+Size of mpk: 16.0 KB
+
+L=100, n=10
+Setup time: 3.87 seconds
+Aggregate time: 10.34 seconds
+Encryption time: 3.00 ms
+Decryption time: 20.03 ms
+Size of crs: 13.59 MB
+Size of mpk: 16.0 KB
+

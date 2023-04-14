@@ -29,9 +29,10 @@ def store_crs(A, B, Gamma, U, W, Z, g1, g2, h):
             cur.execute('INSERT OR REPLACE INTO crs_U (i, j, value) VALUES (?, ?, ?)', (i, j, u.to_binary()))
     for i, row in enumerate(W):
         for j, col in enumerate(row):
-            for k, w in enumerate(col):
-                cur.execute('INSERT OR REPLACE INTO crs_W (i, j, k, value) VALUES (?, ?, ?, ?)',
-                            (i, j, k, w.to_binary()))
+            if i != j:
+                for k, w in enumerate(col):
+                    cur.execute('INSERT OR REPLACE INTO crs_W (i, j, k, value) VALUES (?, ?, ?, ?)',
+                                (i, j, k, w.to_binary()))
     # Commit the changes and close the connection
     conn.commit()
     conn.close()
@@ -159,20 +160,6 @@ def store_hsk(db_path, hsk):
 
     conn.commit()
     conn.close()
-def store_mpk(g1, g2, h, Z, Gamma, Uhat):
-    with sqlite3.connect('mpk.db') as conn_mpk:
-        cur_mpk = conn_mpk.cursor()
-        cur_mpk.execute('CREATE TABLE IF NOT EXISTS master_public_key (name TEXT PRIMARY KEY, value BLOB)')
-        conn_mpk.commit()
-        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('g1', ?)", (g1.to_binary(),))
-        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('g2', ?)", (g2.to_binary(),))
-        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('h', ?)", (h.to_binary(),))
-        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('Z', ?)", (Z.to_binary(),))
-        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('Gamma', ?)",
-                        (Gamma.to_binary(),))
-        cur_mpk.executemany("INSERT OR REPLACE INTO master_public_key (name, value) VALUES (?, ?)",
-                            [('Uhat_' + str(i), elem.to_binary()) for i, elem in enumerate(Uhat)])
-        conn_mpk.commit()
 
 def load_hsk(db_path, i):
     conn = sqlite3.connect(db_path)
@@ -205,6 +192,25 @@ def load_hsk(db_path, i):
     conn.close()
     return g1, g2, i, X_elem, A_elem, B_elem, What_elem
 
+def store_mpk(g1, g2, h, Z, Gamma, Uhat):
+    with sqlite3.connect('mpk.db') as conn_mpk:
+        cur_mpk = conn_mpk.cursor()
+        cur_mpk.execute('CREATE TABLE IF NOT EXISTS master_public_key (name TEXT PRIMARY KEY, value BLOB)')
+        cur_mpk.execute('CREATE TABLE IF NOT EXISTS uhat (id INTEGER PRIMARY KEY, value BLOB)')
+        conn_mpk.commit()
+
+        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('g1', ?)", (g1.to_binary(),))
+        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('g2', ?)", (g2.to_binary(),))
+        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('h', ?)", (h.to_binary(),))
+        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('Z', ?)", (Z.to_binary(),))
+        cur_mpk.execute("INSERT OR REPLACE INTO master_public_key (name, value) VALUES ('Gamma', ?)",
+                        (Gamma.to_binary(),))
+
+        cur_mpk.executemany("INSERT OR REPLACE INTO uhat (id, value) VALUES (?, ?)",
+                            [(i, elem.to_binary()) for i, elem in enumerate(Uhat)])
+
+        conn_mpk.commit()
+
 def load_mpk(db_path):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -224,9 +230,9 @@ def load_mpk(db_path):
     cur.execute("SELECT value FROM master_public_key WHERE name='Gamma'")
     Gamma = G1Element.from_binary(cur.fetchone()[0])
 
-    cur.execute("SELECT name, value FROM master_public_key WHERE name LIKE 'Uhat_%' ORDER BY name")
+    cur.execute("SELECT value FROM uhat ORDER BY id")
     Uhat_rows = cur.fetchall()
-    Uhat = [G1Element.from_binary(row[1]) for row in Uhat_rows]
+    Uhat = [G1Element.from_binary(row[0]) for row in Uhat_rows]
 
     conn.close()
     return g1, g2, h, Z, Gamma, Uhat
