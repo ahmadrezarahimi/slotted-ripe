@@ -8,7 +8,11 @@ import matplotlib.pyplot as plt
 
 n = 10
 # L_values = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-L_values = [10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100]
+L_values = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+'''
+remove():
+    removes all the files that are created by functions
+'''
 def remove():
     os.remove("crs.db")
     os.remove("pks.db")
@@ -17,6 +21,10 @@ def remove():
     os.remove("hsk.db")
     os.remove("mpk.db")
 
+'''
+convert_size():
+    converts the size of the file into a readable format
+'''
 def convert_size(size_bytes):
     if size_bytes == 0:
         return "0B"
@@ -26,9 +34,18 @@ def convert_size(size_bytes):
     s = round(size_bytes / p, 2)
     return f"{s} {size_name[i]}"
 
+'''
+print_size():
+    prints the size of the file
+'''
 def print_size(file_path):
     print(f"Size of {file_path}: {convert_size(os.path.getsize(file_path))}")
 
+'''
+benchmark():
+    runs the benchmarking for the given L and n
+    Here L is the number of slots, and n is the length of attribute vector
+'''
 def benchmark(L, n):
     print(f"Benchmarking for L={L}, n={n}")
 
@@ -52,7 +69,7 @@ def benchmark(L, n):
     y = [Bn(0)] * n
     m = GT.generator() ** GT.order().random()
 
-    # Encryption
+    # Encryption (100 times) and average time
     enc_times = []
     for _ in range(100):
         start_time = time.time()
@@ -61,7 +78,7 @@ def benchmark(L, n):
         enc_times.append(enc_time)
     avg_enc_time = sum(enc_times) / len(enc_times)
 
-    # Decryption
+    # Decryption (100 times) and average time
     dec_times = []
     for _ in range(100):
         start_time = time.time()
@@ -70,8 +87,10 @@ def benchmark(L, n):
         dec_times.append(dec_time)
     avg_dec_time = sum(dec_times) / len(dec_times)
 
+    # Check if decryption is correct
     assert (m == m_dec)
 
+    # print the results
     print(f"Setup time: {setup_time:.2f} seconds")
     print(f"Aggregate time: {aggregate_time:.2f} seconds")
     print(f"Encryption time: {avg_enc_time:.2f} ms")
@@ -113,7 +132,9 @@ with open("benchmarks.txt", "w") as outfile:
 # Plotting the charts
 
 
-
+'''
+plot_chart():
+'''
 def plot_chart(x, y1, y2, xlabel, ylabel, title, filename, y1_label, y2_label):
     plt.plot(x, y1, label=y1_label)
     plt.plot(x, y2, label=y2_label)
@@ -130,10 +151,6 @@ plt.ylim([min(enc_times + dec_times) * 0.9, max(enc_times + dec_times) * 1.1])
 plot_chart(L_values, enc_times, dec_times, "L", "Time (ms)", "Encryption & Decryption Time vs L", "enc_dec_time.png", "Encryption Time", "Decryption Time")
 plot_chart(L_values, setup_times, aggregate_times, "L", "Time (s)", "Setup & Aggregate Time vs L", "setup_aggregate_time.png", "Setup Time", "Aggregate Time")
 
-# Removing individual Encryption, Decryption, CRS, and MPK charts
-# plot_chart(L_values, enc_times, "L", "Time (ms)", "Encryption Time vs L", "encryption_time.png")
-# plot_chart(L_values, dec_times, "L", "Time (ms)", "Decryption Time vs L", "decryption_time.png")
-# plot_chart(L_values, sizes_crs, "L", "Size (bytes)", "Size of CRS vs L", "size_crs.png")
 def plot_chart2(x, y, xlabel, ylabel, title, filename):
     plt.plot(x, y)
     plt.xlabel(xlabel)
@@ -144,9 +161,5 @@ def plot_chart2(x, y, xlabel, ylabel, title, filename):
 
 sizes_crs_mb = [size / (1024 * 1024) for size in sizes_crs]
 plot_chart2(L_values, sizes_crs_mb, "L", "Size (MB)", "Size of CRS vs L (in MB)", "size_crs_mb.png")
-
-
-
-
 
 print("Benchmark results saved in benchmarks.txt and corresponding charts saved as images.")

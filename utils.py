@@ -1,6 +1,10 @@
-from petrelic.multiplicative.pairing import G1, G2, GT, G1Element, G2Element,GTElement, Bn
-from concurrent.futures import ThreadPoolExecutor
+from petrelic.multiplicative.pairing import G1Element, G2Element,GTElement, Bn
 import sqlite3
+'''
+store_crs(): Stores the CRS data in the database
+inputs: CRS (G1, G2, GT, h, Gamma, A, B, U, W)
+output: None
+'''
 def store_crs(A, B, Gamma, U, W, Z, g1, g2, h):
     conn = sqlite3.connect("crs.db")
     cur = conn.cursor()
@@ -36,7 +40,11 @@ def store_crs(A, B, Gamma, U, W, Z, g1, g2, h):
     # Commit the changes and close the connection
     conn.commit()
     conn.close()
-
+'''
+load_crs(): Loads the CRS data from the database
+inputs: L (number of slots) and db_path (path to the database)
+output: CRS (G1, G2, GT, h, Gamma, A, B, U, W)
+'''
 def load_crs(L,db_path='crs.db'):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -74,7 +82,11 @@ def load_crs(L,db_path='crs.db'):
 
     crs = g1, g2, Z, h, Gamma, A, B, U,W
     return crs
-
+'''
+load_public_keys(): Loads the public keys from the database
+inputs: db_path (path to the database) and L (number of slots)
+output: pks (list of public keys)
+'''
 def load_public_keys(db_path, L):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -96,6 +108,11 @@ def load_public_keys(db_path, L):
 
     conn.close()
     return pks
+'''
+load_sk(): Loads the secret key of the ith user from the database
+inputs: sk_db_path (path to the database) and i (index of the user)
+output: sk (secret key) as a Bn object
+'''
 def load_sk(sk_db_path, i):
     with sqlite3.connect(sk_db_path) as conn_sk:
         cur_sk = conn_sk.cursor()
@@ -108,7 +125,11 @@ def load_sk(sk_db_path, i):
             return sk
         else:
             raise ValueError("Secret key not found for index {}".format(i))
-
+'''
+load_attributes(): Loads the attributes of the ith user from the database
+inputs: db_path (path to the database), n (number of attributes) and L (number of slots)
+output: attributes (list of attributes)
+'''
 def load_attributes(db_path, n, L):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -125,7 +146,11 @@ def load_attributes(db_path, n, L):
 
     conn.close()
     return attributes
-
+'''
+store_hsk(): Stores the helping secret key of the ith user in the database
+inputs: db_path (path to the database) and hsk (helping secret key)
+output: None
+'''
 def store_hsk(db_path, hsk):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -160,7 +185,11 @@ def store_hsk(db_path, hsk):
 
     conn.commit()
     conn.close()
-
+'''
+load_hsk(): Loads the helping secret key of the ith user from the database
+inputs: db_path (path to the database) and i (index of the user)
+output: hsk (helping secret key)
+'''
 def load_hsk(db_path, i):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -191,7 +220,11 @@ def load_hsk(db_path, i):
 
     conn.close()
     return g1, g2, i, X_elem, A_elem, B_elem, What_elem
-
+'''
+store_mpk(): Stores the master public key in the database
+inputs: g1, g2, h, Z, Gamma, Uhat (master public key)
+output: None
+'''
 def store_mpk(g1, g2, h, Z, Gamma, Uhat):
     with sqlite3.connect('mpk.db') as conn_mpk:
         cur_mpk = conn_mpk.cursor()
@@ -210,7 +243,11 @@ def store_mpk(g1, g2, h, Z, Gamma, Uhat):
                             [(i, elem.to_binary()) for i, elem in enumerate(Uhat)])
 
         conn_mpk.commit()
-
+'''
+load_mpk(): Loads the master public key from the database
+inputs: db_path (path to the database)
+output: g1, g2, h, Z, Gamma, Uhat (master public key)
+'''
 def load_mpk(db_path):
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()

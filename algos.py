@@ -4,9 +4,10 @@ import sqlite3
 import utils as utils
 
 '''
-Setup algorithm
-inputs: n, L where n is the size of the attributes vector, and L is the number of slots.
-outputs: crs (g1, g2, Z, h, Gamma, A, B, U, W)
+setup():
+    generates the CRS and stores it in the crs.db file
+    n: number of attributes
+    L: number of users
 '''
 def setup(n, L):
     g1 = G1.generator()
@@ -45,7 +46,14 @@ def setup(n, L):
     utils.store_crs(A, B, Gamma, U, W, Z, g1, g2, h)
 
 
-
+'''
+keyGen():
+    generates the public and secret keys for a user
+    crs_db_path: path to the crs.db file
+    i: user id
+    n: number of attributes
+    L: number of users
+'''
 def keyGen(crs_db_path, i, n, L):
     r = G1.order().random()
     conn = sqlite3.connect(crs_db_path)
@@ -74,7 +82,14 @@ def keyGen(crs_db_path, i, n, L):
     pk = [U1, Wh]
     sk = r
     return pk,sk
-
+'''
+batchKeyGen():
+    generates the public and secret keys for all users
+    db_path: path to the crs.db file
+    n: number of attributes
+    L: number of users
+'''
+#TODO this function already samples random attributes for each user for the purpose of benchmarking, in real world we want to give our attributes directly to aggregate
 def batchKeyGen(db_path, n, L):
     conn_crs = sqlite3.connect(db_path)
 
@@ -145,6 +160,15 @@ def compute_what(W, i, w, L):
         if i != j:
             result = result * W[i][j][w]
     return result
+'''
+aggregate():
+    aggregates the public keys of all users
+    attributes_db_path: path to the attributes.db file
+    pks_db_path: path to the pks.db file
+    crs_db_path: path to the crs.db file
+    n: number of attributes
+    L: number of users
+'''
 def aggregate(attributes_db_path, pks_db_path, crs_db_path, n, L):
     # Load attributes
     X = utils.load_attributes(attributes_db_path, n,L)
@@ -194,16 +218,25 @@ def aggregate(attributes_db_path, pks_db_path, crs_db_path, n, L):
         What[i][n + 1] = What[i][n + 1] ** -1
 
     hsk = [(g1, g2, i, X[i], A[i], B[i], What[i]) for i in range(L)]
+
+    # Store the master public key and the helping secret key
     utils.store_hsk('hsk.db', hsk)
     utils.store_mpk(g1, g2, h, Z, Gamma, Uhat)
 
 
 
-
+'''
+Enc():
+    encrypts a message m for a set of attributes y
+    mpk: master public key
+    y: set of attributes
+    m: message
+'''
 def Enc(mpk, y, m):
     g1, g2, h, Z, Gamma, Uhat = mpk
     n = len(y)
 
+    # Generate random values
     s = G1.order().random()
     r = G1.order().random()
     z = G1.order().random()
@@ -220,7 +253,6 @@ def Enc(mpk, y, m):
     for w in range(n+2):
         t = y1[w].mod_mul(r,G1.order())
         t = t.mod_add(s,G1.order())
-        # t = y1[w] * r + s
         ct2[w] = (h ** t) * Uhat[w] ** (-1*z)
 
     ct = [ct0, ct1, ct2, ct3]
@@ -228,7 +260,13 @@ def Enc(mpk, y, m):
 
 
 
-
+'''
+Dec():
+    decrypts a ciphertext ct
+    hsk: helping secret key
+    sk: secret key
+    ct: ciphertext
+'''
 def Dec(hsk, sk, ct):
     g1, g2, i, X, A, B, What = hsk
     ct0, ct1, ct2, ct3 = ct
