@@ -489,7 +489,7 @@ def generate_all_plots(L_values, n_values, setup_times_matrix, aggregate_times_m
     plot_heatmap(enc_times_matrix, L_values, n_values, "L", "n", "Encryption Time vs L and n (in ms)", "plots/enc_time_heatmap.png", "miliseconds")
     plot_heatmap(dec_times_matrix, L_values, n_values, "L", "n", "Decryption Time vs L and n (in ms)", "plots/dec_time_heatmap.png", "miliseconds")
     plot_heatmap(sizes_crs_matrix_mb, L_values, n_values, "L", "n", "Size of CRS vs L and n (in MB)", "plots/size_crs_heatmap.png", "MB")
-    plot_heatmap(sizes_mpk_matrix_mb, L_values, n_values, "L", "n", "Size of mpk vs L and n (in MB)", "plots/size_mpk_heatmap.png", "KB")
+    plot_heatmap(sizes_mpk_matrix_mb, L_values, n_values, "L", "n", "Size of mpk vs L and n (in KB)", "plots/size_mpk_heatmap.png", "KB")
     plot_3d_chart(L_values, n_values, setup_times_matrix, "L", "n", "Time (s)", "Setup Time vs L and n", "plots/setup_time_3d.png")
     plot_3d_chart(L_values, n_values, aggregate_times_matrix, "L", "n", "Time (s)", "Aggregate Time vs L and n", "plots/aggregate_time_3d.png")
     plot_3d_chart(L_values, n_values, enc_times_matrix, "L", "n", "Time (ms)", "Encryption Time vs L and n", "plots/encryption_time_3d.png")
