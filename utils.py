@@ -3,6 +3,7 @@ import sqlite3
 import csv
 import os
 import math
+import pandas as pd
 '''
 store_crs(): Stores the CRS data in the database
 inputs: CRS (G1, G2, GT, h, Gamma, A, B, U, W)
@@ -388,14 +389,19 @@ def plot_3d_chart(x, y, z, xlabel, ylabel, zlabel, title, filename):
     plt.clf()
 
 
+
 def store_benchmarks(L_values, n_values, setup_times_matrix, aggregate_times_matrix, enc_times_matrix, dec_times_matrix, sizes_crs_matrix, sizes_mpk_matrix, filename):
-    with open(filename, "w", newline="") as csvfile:
+    file_exists = os.path.exists(filename)
+
+    with open(filename, "a" if file_exists else "w", newline="") as csvfile:
         fieldnames = [
             "L", "n", "Setup time (s)", "Aggregate time (s)",
             "Encryption time (ms)", "Decryption time (ms)", "Size of crs (B)", "Size of mpk (B)"
         ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+
+        if not file_exists:
+            writer.writeheader()
 
         for i, n_value in enumerate(n_values):
             for j, L_value in enumerate(L_values):
@@ -410,43 +416,28 @@ def store_benchmarks(L_values, n_values, setup_times_matrix, aggregate_times_mat
                     "Size of mpk (B)": sizes_mpk_matrix[i][j]
                 })
 
+
+import pandas as pd
+
 def load_benchmarks(filename):
-    L_values = []
-    n_values = []
-    setup_times_matrix = []
-    aggregate_times_matrix = []
-    enc_times_matrix = []
-    dec_times_matrix = []
-    sizes_crs_matrix = []
-    sizes_mpk_matrix = []
+    df = pd.read_csv(filename)
 
-    with open(filename, "r", newline="") as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            L = int(row["L"])
-            n = int(row["n"])
+    # Sort the dataframe by 'L' and 'n' columns
+    df = df.sort_values(by=['n', 'L'])
 
-            if L not in L_values:
-                L_values.append(L)
-            if n not in n_values:
-                n_values.append(n)
 
-            setup_times_matrix.append(float(row["Setup time (s)"]))
-            aggregate_times_matrix.append(float(row["Aggregate time (s)"]))
-            enc_times_matrix.append(float(row["Encryption time (ms)"]))
-            dec_times_matrix.append(float(row["Decryption time (ms)"]))
-            sizes_crs_matrix.append(row["Size of crs (B)"])
-            sizes_mpk_matrix.append(row["Size of mpk (B)"])
+    L_values = sorted(df['L'].unique())
+    n_values = sorted(df['n'].unique())
 
-    # Reshape the matrices
-    setup_times_matrix = reshape_matrix(setup_times_matrix, n_values, L_values)
-    aggregate_times_matrix = reshape_matrix(aggregate_times_matrix, n_values, L_values)
-    enc_times_matrix = reshape_matrix(enc_times_matrix, n_values, L_values)
-    dec_times_matrix = reshape_matrix(dec_times_matrix, n_values, L_values)
-    sizes_crs_matrix = reshape_matrix(sizes_crs_matrix, n_values, L_values)
-    sizes_mpk_matrix = reshape_matrix(sizes_mpk_matrix, n_values, L_values)
+    setup_times_matrix = reshape_matrix(df['Setup time (s)'].tolist(), n_values, L_values)
+    aggregate_times_matrix = reshape_matrix(df['Aggregate time (s)'].tolist(), n_values, L_values)
+    enc_times_matrix = reshape_matrix(df['Encryption time (ms)'].tolist(), n_values, L_values)
+    dec_times_matrix = reshape_matrix(df['Decryption time (ms)'].tolist(), n_values, L_values)
+    sizes_crs_matrix = reshape_matrix(df['Size of crs (B)'].tolist(), n_values, L_values)
+    sizes_mpk_matrix = reshape_matrix(df['Size of mpk (B)'].tolist(), n_values, L_values)
 
     return L_values, n_values, setup_times_matrix, aggregate_times_matrix, enc_times_matrix, dec_times_matrix, sizes_crs_matrix, sizes_mpk_matrix
+
 
 def reshape_matrix(matrix, n_values, L_values):
     return [matrix[i * len(L_values):(i + 1) * len(L_values)] for i in range(len(n_values))]
