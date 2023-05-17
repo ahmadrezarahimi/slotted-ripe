@@ -47,8 +47,8 @@ Here is the list of algorithm that we measure their performance:
 
 We also measure the size of `crs` and `mpk` for different values of `n` and `L`.
 We plotted our results in *heatmap* and *3D* plots. Here is the result of the benchmark for the following `n` and `L`:
-- `n=[2,3,4,5,6,7,8,9,10,11]`
-- `L=[10,20,30,40,50,60,70,80,90,100]`
+- `n=[10,20,...,100]`
+- `L=[100,200,...,1000]`
 ### Heatmap plots 
 #### Runtime of Setup and Aggregate
 ![Heatmap](plots/setup_time_heatmap.png)
